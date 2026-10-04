@@ -33,13 +33,18 @@ GitHub API ──► collect ──► digest (确定性统计) ──► LLM (�
 需要 Node.js ≥ 20。
 
 ```bash
-git clone <this-repo> && cd gh-whoami
-npm install && npm run build
-
-GITHUB_TOKEN=ghp_xxx node dist/cli.js <username> [--out output] [--max-stars 2000] [--no-llm]
+npx gh-whoami <username> [--out output] [--max-stars 2000] [--no-llm]
 ```
 
-`GITHUB_TOKEN` 可选（未认证 60 req/h，认证后 5000 req/h），但建议配置——footprint 过滤需要额外查一些仓库的 star 数。
+`GITHUB_TOKEN` 可选（未认证 60 req/h，认证后 5000 req/h），但建议配置——footprint 过滤需要额外查一些仓库的 star 数。LLM 凭据从环境变量或 `.env` 文件解析（见下方配置）。
+
+### 从源码运行
+
+```bash
+git clone https://github.com/narrowizard/gh-whoami && cd gh-whoami
+npm install && npm run build
+node dist/cli.js <username>
+```
 
 ## 配置
 

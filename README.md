@@ -33,13 +33,18 @@ Additional generation rules (see `src/prompt.ts`): at most 2 speculative stateme
 Requires Node.js ≥ 20.
 
 ```bash
-git clone <this-repo> && cd gh-whoami
-npm install && npm run build
-
-GITHUB_TOKEN=ghp_xxx node dist/cli.js <username> [--out output] [--max-stars 2000] [--no-llm]
+npx gh-whoami <username> [--out output] [--max-stars 2000] [--no-llm]
 ```
 
-`GITHUB_TOKEN` is optional (60 req/h unauthenticated, 5000 with a token) but recommended — the footprint filter needs a handful of extra repo lookups.
+`GITHUB_TOKEN` is optional (60 req/h unauthenticated, 5000 with a token) but recommended — the footprint filter needs a handful of extra repo lookups. LLM credentials resolve from environment variables or a `.env` file (see Configuration below).
+
+### From source
+
+```bash
+git clone https://github.com/narrowizard/gh-whoami && cd gh-whoami
+npm install && npm run build
+node dist/cli.js <username>
+```
 
 ## Configuration
 
