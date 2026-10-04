@@ -73,7 +73,7 @@ LLM_MODEL=…
 ## 输出
 
 - `<user>-digest.json` — 完整分层 digest：可检查、可复用、可缓存
-- `<user>-README.md` — 生成的草稿
+- `<user>-README.md` — 生成的草稿，末尾带确定性的 gh-whoami 归属页脚
 
 ## 局限
 

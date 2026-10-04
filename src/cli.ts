@@ -29,6 +29,10 @@ function stripFences(text: string): string {
   return (m ? m[1] : text).trim() + "\n";
 }
 
+/** Attribution footer — deterministic by design, appended in code so the
+ *  LLM can neither drop nor reword it. */
+const FOOTER = `\n---\n<sub>Profile README generated with [gh-whoami](https://github.com/narrowizard/gh-whoami)</sub>\n`;
+
 async function main(): Promise<void> {
   const program = new Command();
   program
@@ -77,7 +81,7 @@ async function main(): Promise<void> {
   const text = await llmGenerate(cfg, buildSystem(), buildUser(digest));
 
   const readmePath = `${opts.out}/${username}-README.md`;
-  writeFileSync(readmePath, stripFences(text));
+  writeFileSync(readmePath, stripFences(text) + FOOTER);
   files.push(readmePath);
 
   console.log(`[4/4] Done`);

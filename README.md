@@ -73,7 +73,7 @@ Use `--no-llm` to produce only the digest JSON without any LLM call.
 ## Output
 
 - `<user>-digest.json` — the full tiered digest: inspectable, reusable, cacheable
-- `<user>-README.md` — the generated draft
+- `<user>-README.md` — the generated draft, ending with a deterministic gh-whoami attribution footer
 
 ## Limitations
 
