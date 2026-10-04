@@ -1,0 +1,37 @@
+{
+  "name": "gh-whoami",
+  "version": "0.1.0",
+  "description": "Turn GitHub public data (profile, repos, stars, merged PRs) into an evidence-tagged profile README via LLM",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/narrowizard/gh-whoami.git"
+  },
+  "keywords": [
+    "github",
+    "readme",
+    "profile",
+    "llm",
+    "cli",
+    "developer-profile"
+  ],
+  "bin": {
+    "gh-whoami": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.6.0"
+  }
+}
