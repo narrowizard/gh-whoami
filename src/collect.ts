@@ -2,13 +2,20 @@ import { GitHub, sleep } from "./github.js";
 import type { RawBundle, RawEvent, RawRepo, RawSearchItem, RawStar } from "./types.js";
 
 /** Collect all public sources for one user into a RawBundle. Sequential on purpose. */
-export async function collect(gh: GitHub, user: string, maxStars: number): Promise<RawBundle> {
+export async function collect(
+  gh: GitHub,
+  user: string,
+  maxStars: number,
+  log: (msg: string) => void = () => {},
+): Promise<RawBundle> {
   const coverage: Record<string, string> = {};
 
   const profile = await gh.request<import("./types.js").RawProfile>(`/users/${user}`);
+  log(`profile: @${profile.login}`);
 
   const repos = await gh.paginate<RawRepo>(`/users/${user}/repos?sort=pushed`, { maxPages: 5 });
   if (repos.length >= 500) coverage.repos = "capped at 500 (most recent by push)";
+  log(`repos: ${repos.length}${coverage.repos ? " (capped)" : ""}`);
 
   const starPages = Math.max(1, Math.ceil(maxStars / 100));
   const stars = await gh.paginate<RawStar>(`/users/${user}/starred`, {
@@ -17,6 +24,7 @@ export async function collect(gh: GitHub, user: string, maxStars: number): Promi
   });
   if (stars.length >= maxStars) coverage.stars = `capped at ${maxStars}`;
   if (stars.length === 0) coverage.stars = "no public stars";
+  log(`stars: ${stars.length}${coverage.stars ? " (capped)" : ""}`);
 
   let events: RawEvent[] = [];
   try {
@@ -27,6 +35,7 @@ export async function collect(gh: GitHub, user: string, maxStars: number): Promi
   if (events.length === 0) {
     coverage.events = "empty — no public GitHub activity in ~90d (work may be private or on other platforms)";
   }
+  log(`events: ${events.length}`);
 
   // Upstream evidence: merged PRs anywhere. Search API is tight (10/min unauthenticated).
   const mergedPrs: RawSearchItem[] = [];
@@ -35,6 +44,8 @@ export async function collect(gh: GitHub, user: string, maxStars: number): Promi
       `/search/issues?q=author:${user}+type:pr+is:merged&per_page=100&page=${page}`,
     );
     mergedPrs.push(...data.items);
+    const lastPage = data.items.length < 100 || page === 10;
+    log(`merged PRs: ${mergedPrs.length}${lastPage ? "" : ` (search page ${page}, fetching more…)`}`);
     if (data.items.length < 100) break;
     await sleep(1500);
   }
@@ -59,6 +70,7 @@ export async function collect(gh: GitHub, user: string, maxStars: number): Promi
       /* uncounted → digest treats it as below threshold */
     }
   }
+  log(`upstream star checks: ${Object.keys(upstreamStars).length}/${upstreamToCheck.length} repos`);
 
   // Existing profile README — its badges/links must survive regeneration.
   let profileReadme: string | null = null;
@@ -67,6 +79,7 @@ export async function collect(gh: GitHub, user: string, maxStars: number): Promi
   } catch {
     /* no profile README repo */
   }
+  log(`existing profile README: ${profileReadme ? "found" : "none"}`);
 
   // Fork parents (upstream identification) for the 10 most recently pushed forks.
   const forkParents: Record<string, string | null> = {};
@@ -78,6 +91,12 @@ export async function collect(gh: GitHub, user: string, maxStars: number): Promi
     } catch {
       forkParents[f.name] = null;
     }
+  }
+  log(`fork parents: ${Object.keys(forkParents).length} resolved`);
+
+  if (gh.rate) {
+    const mins = Math.max(0, Math.round((gh.rate.resetEpoch * 1000 - Date.now()) / 60000));
+    log(`GitHub rate limit: ${gh.rate.remaining}/${gh.rate.limit} left (resets in ~${mins} min)`);
   }
 
   return { profile, repos, stars, events, mergedPrs, profileReadme, upstreamStars, forkParents, coverage };

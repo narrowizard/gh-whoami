@@ -4,14 +4,33 @@ English | [简体中文](README_cn.md)
 
 Generate an evidence-grounded GitHub profile README from public data — profile, repos, stars, and merged PRs — with an LLM.
 
+## Quick Start
+
+Requires Node.js ≥ 20 and an LLM API key. No OAuth — GitHub public data is fetched unauthenticated.
+
+```bash
+export ANTHROPIC_API_KEY=…        # or OPENAI_API_KEY / LLM_* — see Configuration
+npx gh-whoami <your-username>
+```
+
+Review the draft at `output/<user>-README.md`, then publish it as your profile README:
+
+1. Create a **public** repository named exactly like your username (`<user>/<user>`) — GitHub greets you with a "You've found a secret!" prompt.
+2. Add a root `README.md` and paste the draft in.
+3. Commit — your GitHub profile page now displays it.
+
+Full rules and edge cases (pre-July-2020 repos, visibility changes): see the official [Managing your profile README](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme) doc. 
+
+`GITHUB_TOKEN` is optional but recommended (raises the GitHub quota from 60 to 5000 req/h).
+
+## How it works
+
 The core design: **the digest's layering defines the LLM's claim permissions.** Raw API data is compressed into a deterministic, tiered digest before the LLM ever sees it, so the model can only state what the evidence allows — never invent contributions.
 
 ```
 GitHub API ──► collect ──► digest (deterministic stats) ──► LLM (single-shot, rule-bound) ──► README draft
                sequential     tiered evidence + coverage       anti-hallucination rules       review, then publish
 ```
-
-## How it works
 
 1. **Collect** — six public sources, no OAuth scopes needed: user profile, repos, starred repos (with timestamps), merged PRs via search, public events (optional, often empty), and the existing profile README.
 2. **Digest** — everything is reduced to computed facts: language distributions, topic fingerprint (recency-weighted), star timeline, taste profile, and contribution evidence split into tiers with explicit coverage notes for whatever came back empty.
@@ -26,14 +45,12 @@ GitHub API ──► collect ──► digest (deterministic stats) ──► LL
 | **T2** | Active original repos | capability statements, no "contribution" wording |
 | **T3** | Forks | "participates in / follows" only — never contributor |
 
-Additional generation rules (see `src/prompt.ts`): at most 2 speculative statements, each marked `(inferred)`; languages and topics may only come from digest entries; dimensions marked empty in `coverage` are off-limits for speculation; the existing README serves as tone/content reference, not a template to copy.
+Additional generation rules (see `src/prompt.ts`): at most 2 speculative statements, each marked with the 🔮 icon; languages and topics may only come from digest entries; dimensions marked empty in `coverage` are off-limits for speculation; the existing README serves as tone/content reference, not a template to copy.
 
 ## Usage
 
-Requires Node.js ≥ 20.
-
 ```bash
-npx gh-whoami <username> [--out output] [--max-stars 2000] [--no-llm]
+npx gh-whoami <username> [--out output] [--max-stars 2000] [--no-llm] [--verbose] [--dotenv <path>]
 ```
 
 `GITHUB_TOKEN` is optional (60 req/h unauthenticated, 5000 with a token) but recommended — the footprint filter needs a handful of extra repo lookups. LLM credentials resolve from environment variables or a `.env` file (see Configuration below).
@@ -48,7 +65,7 @@ node dist/cli.js <username>
 
 ## Configuration
 
-The LLM endpoint is resolved from environment variables (or a `.env` file — copy `.env.example`; real env vars take precedence). Three styles are supported, with `LLM_*` taking priority:
+The LLM endpoint is resolved from environment variables (or an env file — copy `.env.example`; real env vars take precedence). By default `./.env` in the working directory is loaded; pass `--dotenv <path>` to load a specific file instead (a missing file is an error). Three styles are supported, with `LLM_*` taking priority:
 
 ```bash
 # Anthropic-compatible (including local gateways)
@@ -68,7 +85,7 @@ LLM_API_KEY=…
 LLM_MODEL=…
 ```
 
-Use `--no-llm` to produce only the digest JSON without any LLM call.
+Use `--no-llm` to produce only the digest JSON without any LLM call. Progress is logged per data source during collection; `--verbose` additionally logs every GitHub API request with the remaining rate limit.
 
 ## Output
 

@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `--no-llm` produces only the digest JSON (useful for testing the data pipeline)
 - No test suite yet — verify changes by running the CLI against a real username.
 
-Credentials come from env vars or `.env` (see `.env.example`): `GITHUB_TOKEN` (optional; raises GitHub rate limits) and one of three LLM configuration styles — `ANTHROPIC_*`, `OPENAI_*`, or generic `LLM_*` (highest priority; resolution order in `src/llm.ts`). Never print token values.
+Credentials come from env vars, `./.env`, or a file passed via `--dotenv <path>` (see `.env.example`): `GITHUB_TOKEN` (optional; raises GitHub rate limits) and one of three LLM configuration styles — `ANTHROPIC_*`, `OPENAI_*`, or generic `LLM_*` (highest priority; resolution order in `src/llm.ts`). Never print token values.
 
 ## Architecture
 

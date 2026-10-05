@@ -15,16 +15,18 @@ export function resolveLlm(env: NodeJS.ProcessEnv): LlmConfig | null {
   if (!provider) return null;
 
   if (provider === "anthropic") {
-    const baseUrl = env.LLM_BASE_URL ?? env.ANTHROPIC_BASE_URL;
-    const apiKey = env.LLM_API_KEY ?? env.ANTHROPIC_API_KEY ?? env.ANTHROPIC_AUTH_TOKEN ?? "";
-    const model = env.LLM_MODEL ?? env.ANTHROPIC_MODEL ?? "claude-sonnet-4-5";
+    // `||` (not `??`): an empty-string var (e.g. from a copied .env template)
+    // must fall through to the next source instead of shadowing it.
+    const baseUrl = env.LLM_BASE_URL || env.ANTHROPIC_BASE_URL;
+    const apiKey = env.LLM_API_KEY || env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN || "";
+    const model = env.LLM_MODEL || env.ANTHROPIC_MODEL || "claude-sonnet-4-5";
     if (!baseUrl && !apiKey) return null; // nothing to talk to
-    return { provider, baseUrl: baseUrl ?? "https://api.anthropic.com", apiKey, model };
+    return { provider, baseUrl: baseUrl || "https://api.anthropic.com", apiKey, model };
   }
 
-  const baseUrl = env.LLM_BASE_URL ?? env.OPENAI_BASE_URL;
-  const apiKey = env.LLM_API_KEY ?? env.OPENAI_API_KEY ?? "";
-  const model = env.LLM_MODEL ?? env.OPENAI_MODEL ?? "gpt-4o-mini";
+  const baseUrl = env.LLM_BASE_URL || env.OPENAI_BASE_URL;
+  const apiKey = env.LLM_API_KEY || env.OPENAI_API_KEY || "";
+  const model = env.LLM_MODEL || env.OPENAI_MODEL || "gpt-4o-mini";
   if (!baseUrl && !apiKey) return null;
   return { provider, baseUrl: baseUrl ?? "https://api.openai.com/v1", apiKey, model };
 }

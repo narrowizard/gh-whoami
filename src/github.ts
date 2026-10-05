@@ -2,7 +2,13 @@ const API = "https://api.github.com";
 
 /** Minimal sequential GitHub REST client (keeps concurrency at 1). */
 export class GitHub {
-  constructor(private token: string | undefined) {}
+  /** Latest rate-limit snapshot seen in response headers, if any. */
+  rate: { limit: number; remaining: number; resetEpoch: number } | null = null;
+
+  constructor(
+    private token: string | undefined,
+    private debug: (msg: string) => void = () => {},
+  ) {}
 
   private headers(accept: string): Record<string, string> {
     const h: Record<string, string> = {
@@ -13,8 +19,26 @@ export class GitHub {
     return h;
   }
 
-  async request<T>(path: string, accept = "application/vnd.github+json"): Promise<T> {
+  /** Single fetch funnel: tracks rate limit, emits debug logs. */
+  private async fetch(path: string, accept: string): Promise<Response> {
     const res = await fetch(`${API}${path}`, { headers: this.headers(accept) });
+    const limit = res.headers.get("x-ratelimit-limit");
+    const remaining = res.headers.get("x-ratelimit-remaining");
+    if (limit !== null && remaining !== null) {
+      this.rate = {
+        limit: Number(limit),
+        remaining: Number(remaining),
+        resetEpoch: Number(res.headers.get("x-ratelimit-reset") ?? 0),
+      };
+    }
+    this.debug(
+      `GET ${path} → ${res.status}` + (this.rate ? ` (rate ${this.rate.remaining}/${this.rate.limit})` : ""),
+    );
+    return res;
+  }
+
+  async request<T>(path: string, accept = "application/vnd.github+json"): Promise<T> {
+    const res = await this.fetch(path, accept);
     if (res.status === 403 || res.status === 429) {
       const remaining = res.headers.get("x-ratelimit-remaining");
       if (remaining === "0") {
@@ -29,7 +53,7 @@ export class GitHub {
   }
 
   async requestText(path: string, accept: string): Promise<string> {
-    const res = await fetch(`${API}${path}`, { headers: this.headers(accept) });
+    const res = await this.fetch(path, accept);
     if (!res.ok) throw new Error(`GitHub API ${res.status} on ${path}`);
     return await res.text();
   }

@@ -1,6 +1,6 @@
 {
   "name": "gh-whoami",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turn GitHub public data (profile, repos, stars, merged PRs) into an evidence-tagged profile README via LLM",
   "type": "module",
   "license": "MIT",

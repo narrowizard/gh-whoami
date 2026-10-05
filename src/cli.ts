@@ -9,18 +9,21 @@ import { buildSystem, buildUser } from "./prompt.js";
 import { printSummary } from "./report.js";
 
 /** Tiny .env loader — never overrides real env vars. */
-function loadEnvFile(path: string): void {
+function loadEnvFile(path: string, required = false): void {
   let text: string;
   try {
     text = readFileSync(path, "utf8");
   } catch {
+    if (required) throw new Error(`env file not found: ${path}`);
     return;
   }
   for (const line of text.split("\n")) {
     const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
     if (!m || line.trim().startsWith("#")) continue;
     const val = m[2].replace(/^["']|["']$/g, "");
-    if (!(m[1] in process.env)) process.env[m[1]] = val;
+    // Empty values are ignored: a copied .env.example template must not shadow
+    // real env vars with "" (?? chains would treat "" as a configured value).
+    if (val !== "" && !(m[1] in process.env)) process.env[m[1]] = val;
   }
 }
 
@@ -42,20 +45,21 @@ async function main(): Promise<void> {
     .option("--out <dir>", "output directory", "output")
     .option("--max-stars <n>", "cap on stars fetched", "2000")
     .option("--no-llm", "collect + digest only, skip generation")
+    .option("-v, --verbose", "log every GitHub API request")
+    .option("--dotenv <path>", "load env vars from this dotenv file instead of ./.env")
     .version("0.1.0");
   program.parse();
   const opts = program.opts();
   const username = program.processedArgs[0] as string;
 
-  loadEnvFile(".env");
+  if (opts.dotenv) loadEnvFile(opts.dotenv, true);
+  else loadEnvFile(".env");
   const maxStars = parseInt(opts.maxStars, 10) || 2000;
 
   console.log(`[1/4] Collecting public data for ${username} …`);
-  const gh = new GitHub(process.env.GITHUB_TOKEN);
-  const bundle = await collect(gh, username, maxStars);
-  console.log(
-    `      repos=${bundle.repos.length} stars=${bundle.stars.length} mergedPrs=${bundle.mergedPrs.length} events=${bundle.events.length}`,
-  );
+  const sub = (msg: string): void => console.log(`      ${msg}`);
+  const gh = new GitHub(process.env.GITHUB_TOKEN, opts.verbose ? sub : undefined);
+  const bundle = await collect(gh, username, maxStars, sub);
 
   console.log(`[2/4] Building digest …`);
   const digest = buildDigest(bundle);
